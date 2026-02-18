@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reg/VIN Extractor</title>
+<title>Reg Extractor</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -242,13 +242,13 @@
 </head>
 <body>
 <div class="container">
-  <h1>Reg / VIN Extractor</h1>
+  <h1>Reg Extractor</h1>
 
   <!-- Drop Zone -->
   <div class="drop-zone" id="dropZone">
     <span class="drop-zone-icon">&#128247;</span>
     <p><strong>Drop an image here</strong>, paste from clipboard, or click to select<br>
-    Supports photos and screenshots of UK plates &amp; VINs</p>
+    Supports photos and screenshots of UK plates</p>
     <input type="file" id="fileInput" accept="image/*">
   </div>
 
@@ -272,8 +272,7 @@
     <table>
       <thead>
         <tr>
-          <th>Type</th>
-          <th>Value</th>
+          <th>Reg</th>
           <th></th>
         </tr>
       </thead>
@@ -302,7 +301,7 @@
   const addRowBtn = document.getElementById('addRowBtn');
   const downloadBtn = document.getElementById('downloadBtn');
 
-  let rows = []; // { type: 'reg'|'vin', value: string, uncertain?: boolean }
+  let rows = []; // { type: 'reg', value: string, uncertain?: boolean }
 
   // --- Image Handling ---
   function showError(msg) {
@@ -388,8 +387,8 @@
       }
 
       rows = (data.results || []).map((r) => ({
-        type: r.type === 'vin' ? 'vin' : 'reg',
-        value: r.type === 'vin' ? (r.value || '') : (r.value || '').replace(/\s/g, ''),
+        type: 'reg',
+        value: (r.value || '').replace(/\s/g, ''),
         uncertain: !!r.uncertain,
       }));
 
@@ -397,7 +396,7 @@
       resultsSection.classList.add('visible');
 
       if (rows.length === 0) {
-        showError('No registration plates or VINs were found in this image.');
+        showError('No registration plates were found in this image.');
       }
     } catch (err) {
       showError(err.message);
@@ -411,20 +410,6 @@
     resultsBody.innerHTML = '';
     rows.forEach((row, i) => {
       const tr = document.createElement('tr');
-
-      // Type cell
-      const tdType = document.createElement('td');
-      const sel = document.createElement('select');
-      ['reg', 'vin'].forEach((t) => {
-        const opt = document.createElement('option');
-        opt.value = t;
-        opt.textContent = t === 'reg' ? 'Reg' : 'VIN';
-        if (t === row.type) opt.selected = true;
-        sel.appendChild(opt);
-      });
-      sel.addEventListener('change', () => { rows[i].type = sel.value; });
-      tdType.appendChild(sel);
-      tr.appendChild(tdType);
 
       // Value cell
       const tdVal = document.createElement('td');
@@ -468,17 +453,16 @@
 
   // --- CSV Export ---
   downloadBtn.addEventListener('click', () => {
-    const csvRows = ['Type,Value'];
+    const csvRows = ['Reg'];
     rows.forEach((r) => {
-      const raw = r.type === 'reg' ? r.value.replace(/\s/g, '') : r.value;
-      const val = raw.replace(/"/g, '""');
-      csvRows.push(`${r.type === 'vin' ? 'VIN' : 'Reg'},"${val}"`);
+      const val = r.value.replace(/\s/g, '').replace(/"/g, '""');
+      csvRows.push(`"${val}"`);
     });
     const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'reg-vin-extract.csv';
+    a.download = 'reg-extract.csv';
     a.click();
     URL.revokeObjectURL(url);
   });

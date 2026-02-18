@@ -26,28 +26,24 @@ app.get("/", (_req, res) => {
   res.sendFile(indexHtml);
 });
 
-const SYSTEM_PROMPT = `You are a UK vehicle registration plate and VIN extraction tool. Analyse the provided image and extract:
-
-1. **UK Registration plates** — all formats including:
-   - Current format: AB12 CDE
-   - Prefix format: A123 BCD
-   - Suffix format: ABC 123D
-   - Northern Ireland: ABC 1234
-   - Dateless: 1234 AB or AB 1234
-2. **VINs (Vehicle Identification Numbers)** — 17-character alphanumeric codes (never contain I, O, or Q)
+const SYSTEM_PROMPT = `You are a UK vehicle registration plate extraction tool. Analyse the provided image and extract all UK registration plates in any format:
+- Current format: AB12 CDE
+- Prefix format: A123 BCD
+- Suffix format: ABC 123D
+- Northern Ireland: ABC 1234
+- Dateless: 1234 AB or AB 1234
 
 Return ONLY valid JSON in this exact format, with no other text:
-{"results": [{"type": "reg", "value": "AB12 CDE", "uncertain": false}]}
+{"results": [{"type": "reg", "value": "AB12CDE", "uncertain": false}]}
 
 Rules:
-- Normalise registration plates to UPPERCASE with standard spacing
-- For current-format plates, format as "XX00 XXX" (4+3 with space)
+- Normalise registration plates to UPPERCASE with NO spaces
 - Set "uncertain": true if the text is partially obscured, blurry, or you are less than 90% confident
-- If no plates or VINs are found, return {"results": []}
-- type must be "reg" for registration plates or "vin" for VINs`;
+- If no plates are found, return {"results": []}
+- type must always be "reg"`;
 
 interface ExtractResult {
-  type: "reg" | "vin";
+  type: "reg";
   value: string;
   uncertain: boolean;
 }
@@ -84,7 +80,7 @@ app.post("/api/extract", async (req, res) => {
               { type: "image_url", image_url: { url: image } },
               {
                 type: "text",
-                text: "Extract all UK registration plates and VINs visible in this image.",
+                text: "Extract all UK registration plates visible in this image.",
               },
             ],
           },
@@ -114,8 +110,8 @@ app.post("/api/extract", async (req, res) => {
 
     const parsed = JSON.parse(jsonMatch[0]) as { results?: ExtractResult[] };
     const results: ExtractResult[] = (parsed.results ?? []).map((r) => ({
-      type: r.type === "vin" ? ("vin" as const) : ("reg" as const),
-      value: r.value ?? "",
+      type: "reg" as const,
+      value: (r.value ?? "").replace(/\s/g, ""),
       uncertain: !!r.uncertain,
     }));
 
