@@ -22,6 +22,10 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
 
+app.get("/", (_req, res) => {
+  res.sendFile(indexHtml);
+});
+
 const SYSTEM_PROMPT = `You are a UK vehicle registration plate and VIN extraction tool. Analyse the provided image and extract:
 
 1. **UK Registration plates** — all formats including:

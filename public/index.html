@@ -389,7 +389,7 @@
 
       rows = (data.results || []).map((r) => ({
         type: r.type === 'vin' ? 'vin' : 'reg',
-        value: r.value || '',
+        value: r.type === 'vin' ? (r.value || '') : (r.value || '').replace(/\s/g, ''),
         uncertain: !!r.uncertain,
       }));
 
@@ -470,7 +470,8 @@
   downloadBtn.addEventListener('click', () => {
     const csvRows = ['Type,Value'];
     rows.forEach((r) => {
-      const val = r.value.replace(/"/g, '""');
+      const raw = r.type === 'reg' ? r.value.replace(/\s/g, '') : r.value;
+      const val = raw.replace(/"/g, '""');
       csvRows.push(`${r.type === 'vin' ? 'VIN' : 'Reg'},"${val}"`);
     });
     const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
