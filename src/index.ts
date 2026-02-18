@@ -10,7 +10,14 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
 app.use(express.json({ limit: "50mb" }));
-app.use(express.static(path.join(__dirname, "../public")));
+
+const publicDir = path.join(__dirname, "../public");
+console.log("Serving static files from:", publicDir);
+app.use(express.static(publicDir));
+
+app.get("/health", (_req, res) => {
+  res.json({ ok: true });
+});
 
 const SYSTEM_PROMPT = `You are a UK vehicle registration plate and VIN extraction tool. Analyse the provided image and extract:
 
