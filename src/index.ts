@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -12,7 +13,9 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 app.use(express.json({ limit: "50mb" }));
 
 const publicDir = path.join(__dirname, "../public");
+const indexHtml = path.join(publicDir, "index.html");
 console.log("Serving static files from:", publicDir);
+console.log("index.html exists:", fs.existsSync(indexHtml));
 app.use(express.static(publicDir));
 
 app.get("/health", (_req, res) => {
@@ -119,6 +122,6 @@ app.post("/api/extract", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Reg Extractor server running on port ${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Reg Extractor server running on 0.0.0.0:${PORT}`);
 });
