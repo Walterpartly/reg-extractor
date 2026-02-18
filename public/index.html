@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reg/VIN Extractor</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f5f7fa;
+    color: #1a1a2e;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+
+  /* Buttons */
+  button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+  }
+
+  button:active { opacity: 0.8; }
+
+  .btn-primary { background: #4f46e5; color: #fff; }
+  .btn-primary:hover { background: #4338ca; }
+
+  .btn-secondary { background: #e5e7eb; color: #374151; }
+  .btn-secondary:hover { background: #d1d5db; }
+
+  .btn-danger { background: #fee2e2; color: #991b1b; }
+  .btn-danger:hover { background: #fecaca; }
+
+  .btn-success { background: #10b981; color: #fff; }
+  .btn-success:hover { background: #059669; }
+
+  /* Drop Zone */
+  .drop-zone {
+    background: #fff;
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 1.25rem;
+    position: relative;
+  }
+
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: #4f46e5;
+    background: #eef2ff;
+  }
+
+  .drop-zone-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    display: block;
+    opacity: 0.5;
+  }
+
+  .drop-zone p {
+    color: #64748b;
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  .drop-zone p strong { color: #4f46e5; }
+
+  .drop-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  /* Preview */
+  .preview-section {
+    background: #fff;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    display: none;
+  }
+
+  .preview-section.visible { display: block; }
+
+  .preview-section img {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 8px;
+    display: block;
+    margin: 0 auto;
+  }
+
+  /* Loading */
+  .loading {
+    text-align: center;
+    padding: 2rem;
+    display: none;
+  }
+
+  .loading.visible { display: block; }
+
+  .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #4f46e5;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 0 auto 0.75rem;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading p { color: #64748b; font-size: 0.9rem; }
+
+  /* Error */
+  .error-msg {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.9rem;
+    display: none;
+  }
+
+  .error-msg.visible { display: block; }
+
+  /* Results */
+  .results-section {
+    background: #fff;
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    display: none;
+  }
+
+  .results-section.visible { display: block; }
+
+  .results-section h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+  }
+
+  th {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 2px solid #e5e7eb;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #6b7280;
+  }
+
+  td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 0.9rem;
+  }
+
+  td select {
+    padding: 0.3rem 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    background: #fff;
+  }
+
+  td input[type="text"] {
+    width: 100%;
+    padding: 0.3rem 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-family: monospace;
+  }
+
+  .uncertain-badge {
+    display: inline-block;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+  }
+
+  .row-actions { white-space: nowrap; }
+
+  .row-actions button {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .results-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    color: #9ca3af;
+    font-size: 0.75rem;
+    margin-top: 2rem;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Reg / VIN Extractor</h1>
+
+  <!-- Drop Zone -->
+  <div class="drop-zone" id="dropZone">
+    <span class="drop-zone-icon">&#128247;</span>
+    <p><strong>Drop an image here</strong>, paste from clipboard, or click to select<br>
+    Supports photos and screenshots of UK plates &amp; VINs</p>
+    <input type="file" id="fileInput" accept="image/*">
+  </div>
+
+  <!-- Preview -->
+  <div class="preview-section" id="previewSection">
+    <img id="previewImg" alt="Uploaded image preview">
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <p>Analysing image with Claude&hellip;</p>
+  </div>
+
+  <!-- Error -->
+  <div class="error-msg" id="errorMsg"></div>
+
+  <!-- Results -->
+  <div class="results-section" id="resultsSection">
+    <h2>Extracted Results</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Value</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody"></tbody>
+    </table>
+    <div class="results-actions">
+      <button class="btn-secondary" id="addRowBtn">+ Add Row</button>
+      <button class="btn-success" id="downloadBtn">Download CSV</button>
+    </div>
+  </div>
+
+  <div class="footer">Powered by Claude via OpenRouter</div>
+</div>
+
+<script>
+(function () {
+  // --- DOM refs ---
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const previewSection = document.getElementById('previewSection');
+  const previewImg = document.getElementById('previewImg');
+  const loading = document.getElementById('loading');
+  const errorMsg = document.getElementById('errorMsg');
+  const resultsSection = document.getElementById('resultsSection');
+  const resultsBody = document.getElementById('resultsBody');
+  const addRowBtn = document.getElementById('addRowBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+
+  let rows = []; // { type: 'reg'|'vin', value: string, uncertain?: boolean }
+
+  // --- Image Handling ---
+  function showError(msg) {
+    errorMsg.textContent = msg;
+    errorMsg.classList.add('visible');
+  }
+
+  function hideError() {
+    errorMsg.classList.remove('visible');
+  }
+
+  function handleImage(file) {
+    hideError();
+    if (!file || !file.type.startsWith('image/')) {
+      showError('Please provide a valid image file.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      previewImg.src = dataUrl;
+      previewSection.classList.add('visible');
+      sendToBackend(dataUrl);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // Drag & drop
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) handleImage(file);
+  });
+
+  // File picker
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) handleImage(file);
+    fileInput.value = '';
+  });
+
+  // Paste from clipboard
+  document.addEventListener('paste', (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        handleImage(item.getAsFile());
+        return;
+      }
+    }
+  });
+
+  // --- Backend API Call ---
+  async function sendToBackend(dataUrl) {
+    loading.classList.add('visible');
+    resultsSection.classList.remove('visible');
+    hideError();
+
+    try {
+      const response = await fetch('/api/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataUrl }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `Server error: ${response.status}`);
+      }
+
+      rows = (data.results || []).map((r) => ({
+        type: r.type === 'vin' ? 'vin' : 'reg',
+        value: r.value || '',
+        uncertain: !!r.uncertain,
+      }));
+
+      renderTable();
+      resultsSection.classList.add('visible');
+
+      if (rows.length === 0) {
+        showError('No registration plates or VINs were found in this image.');
+      }
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      loading.classList.remove('visible');
+    }
+  }
+
+  // --- Results Table ---
+  function renderTable() {
+    resultsBody.innerHTML = '';
+    rows.forEach((row, i) => {
+      const tr = document.createElement('tr');
+
+      // Type cell
+      const tdType = document.createElement('td');
+      const sel = document.createElement('select');
+      ['reg', 'vin'].forEach((t) => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t === 'reg' ? 'Reg' : 'VIN';
+        if (t === row.type) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', () => { rows[i].type = sel.value; });
+      tdType.appendChild(sel);
+      tr.appendChild(tdType);
+
+      // Value cell
+      const tdVal = document.createElement('td');
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.value = row.value;
+      inp.addEventListener('input', () => { rows[i].value = inp.value; });
+      tdVal.appendChild(inp);
+      if (row.uncertain) {
+        const badge = document.createElement('span');
+        badge.className = 'uncertain-badge';
+        badge.textContent = 'uncertain';
+        tdVal.appendChild(badge);
+      }
+      tr.appendChild(tdVal);
+
+      // Actions cell
+      const tdAct = document.createElement('td');
+      tdAct.className = 'row-actions';
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn-danger';
+      delBtn.textContent = 'Delete';
+      delBtn.addEventListener('click', () => {
+        rows.splice(i, 1);
+        renderTable();
+      });
+      tdAct.appendChild(delBtn);
+      tr.appendChild(tdAct);
+
+      resultsBody.appendChild(tr);
+    });
+  }
+
+  addRowBtn.addEventListener('click', () => {
+    rows.push({ type: 'reg', value: '', uncertain: false });
+    renderTable();
+    // Focus the new input
+    const inputs = resultsBody.querySelectorAll('input[type="text"]');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  });
+
+  // --- CSV Export ---
+  downloadBtn.addEventListener('click', () => {
+    const csvRows = ['Type,Value'];
+    rows.forEach((r) => {
+      const val = r.value.replace(/"/g, '""');
+      csvRows.push(`${r.type === 'vin' ? 'VIN' : 'Reg'},"${val}"`);
+    });
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'reg-vin-extract.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+})();
+</script>
+</body>
+</html>
